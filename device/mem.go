@@ -8,17 +8,17 @@ import (
 )
 
 type MEM struct {
-	Total   types.Bytes
-	Free    types.Bytes
-	Buffer  types.Bytes
-	Used    types.Bytes
+	Total   types.Bytes `json:"Total"`
+	Free    types.Bytes `json:"Free"`
+	Buffer  types.Bytes `json:"Buffer"`
+	Used    types.Bytes `json:"Used"`
 	Percent struct {
-		Used     types.Percent
-		WithBuff types.Percent
-	}
+		Used     types.Percent `json:"Used"`
+		WithBuff types.Percent `json:"WithBuff"`
+	} `json:"Percent"`
 }
 
-func (m *MEM) update() {
+func (m *MEM) Update() {
 	b := make([]byte, 140)
 	f, _ := os.Open("/proc/meminfo")
 	_, err := f.Read(b)
@@ -28,16 +28,17 @@ func (m *MEM) update() {
 	f.Close()
 	var seeker types.NumSeeker
 	seeker.Init(b)
-	m.Total = types.Bytes(seeker.GetNum())
-	m.Free = types.Bytes(seeker.GetNum())
-	m.Used = m.Total - types.Bytes(seeker.GetNum())
-	m.Buffer = types.Bytes(seeker.GetNum() + seeker.GetNum())
+	m.Total.FromKiB(seeker.GetNum())
+	m.Free.FromKiB(seeker.GetNum())
+	m.Used.FromKiB(seeker.GetNum())
+	m.Used = m.Total - m.Used
+	m.Buffer.FromKiB(seeker.GetNum() + seeker.GetNum())
 	m.Percent.Used.CalcBytes(m.Used, m.Total)
 	m.Percent.WithBuff.CalcBytes(m.Used+m.Buffer, m.Total)
 }
 
 func (m *MEM) String() string {
-	return fmt.Sprintf("%s USED  %s BUFF  %s FREE", types.Bytes(m.Used), m.Buffer, m.Free)
+	return fmt.Sprintf("%s (%s) USED  %s BUFF  %s FREE", types.Bytes(m.Used), m.Percent.Used.String(), m.Buffer, m.Free)
 }
 
 func (m *MEM) JSON() (string, error) {

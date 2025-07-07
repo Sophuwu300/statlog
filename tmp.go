@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"git.sophuwu.com/statlog/device"
-	"strings"
 	"time"
 )
 
@@ -14,36 +13,24 @@ type HWInfo struct {
 	MEM  device.MEM `json:"MEM"`
 }
 
-func (this *HWInfo) Update() {
+func (hw *HWInfo) Update() {
+	hw.Time = time.Now().UnixMilli()
 	done := make(chan bool)
 	go func() {
-		this.CPU.update()
+		hw.CPU.Update()
 		done <- true
 	}()
 	go func() {
-		this.MEM.update()
+		hw.MEM.Update()
 		done <- true
 	}()
 	<-done
 	<-done
-	this.Time = time.Now().UnixMilli()
 }
-func (i HWInfo) String() string {
-	if CONFIG.Json {
-		b, _ := json.Marshal(i)
-		return string(b)
-	}
-	s := i.MEM.String()
-	if SI[CONFIG.Unit] == '%' {
-		s = i.MEM.Percent().String()
-	}
-	return fmt.Sprintf("MEM: %s | CPU: %s", s, i.CPU.String())
+func (hw *HWInfo) String() string {
+	return fmt.Sprintf("%s | %s\n%s", hw.MEM.String(), hw.CPU.String(), hw.CPU.LoadCoreStr())
 }
-
-// func main() {
-// 	var hw HWInfo
-// 	for do := true; do; do = CONFIG.Repeat {
-// 		hw.Update()
-// 		fmt.Println(hw)
-// 	}
-// }
+func (hw *HWInfo) JSON() (string, error) {
+	b, e := json.MarshalIndent(hw, "", "  ")
+	return string(b), e
+}
