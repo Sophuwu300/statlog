@@ -28,7 +28,7 @@ func (hw *HWInfo) Update() {
 	<-done
 }
 func (hw *HWInfo) String() string {
-	return fmt.Sprintf("%s | %s\n%s", hw.MEM.String(), hw.CPU.String(), hw.CPU.LoadCoreStr())
+	return fmt.Sprintf("%s | %s\n", hw.MEM.String(), hw.CPU.String())
 }
 func (hw *HWInfo) JSON() (string, error) {
 	b, e := json.MarshalIndent(hw, "", "  ")
