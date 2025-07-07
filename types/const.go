@@ -2,4 +2,4 @@ package types
 
 import "time"
 
-const SampleDuration = time.Second
+var SampleDuration = time.Second

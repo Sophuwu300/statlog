@@ -8,7 +8,7 @@ func (p Percent) String() string {
 	if p < 0 {
 		return ""
 	}
-	return fmt.Sprintf("%3.0f %%", p)
+	return fmt.Sprintf("%3d %%", int(p))
 }
 
 func (p Percent) Compact() string {
@@ -46,4 +46,28 @@ func (P *Percent) SetValue(v float64) {
 }
 func (P *Percent) SetValueInt(v int) {
 	*P = Percent(v)
+}
+
+func (P *Percent) Bar(title string, w int) (s string, err error) {
+	if w == 0 {
+		w, _ = TermSize()
+	}
+	c := P.Compact()
+	s = title + " ["
+	w = w - len(s) - 2 - len(c)
+
+	if w < 10 {
+		return "", fmt.Errorf("terminal too narrow")
+	}
+
+	v := int(P.Value() * float64(w) / 100)
+	i := 0
+	for i = 0; i < v; i++ {
+		s += "|"
+	}
+	for ; i < w; i++ {
+		s += " "
+	}
+	s += c + "] "
+	return s, nil
 }

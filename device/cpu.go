@@ -18,6 +18,34 @@ type CPU struct {
 	Temp     types.Celsius   `json:"Temp"`
 }
 
+func (c *CPU) LoadBar() (s string, err error) {
+	w, _ := types.TermSize()
+	l := len(c.LoadCore)
+	ss := ""
+	div := 3
+	if w < 100 {
+		div = 2
+	} else if w > 200 {
+		div = 4
+	}
+	w = (w - 2) / div
+	for i := 0; i < l; i++ {
+		if ss, err = c.LoadCore[i].Bar(fmt.Sprintf("%2d", i), w); err != nil {
+			return "", err
+		}
+		s += ss
+		if i%div == div-1 {
+			s += "\n"
+		} else {
+			s += " "
+		}
+	}
+	if s[len(s)-1] == ' ' || s[len(s)-1] == '\n' {
+		s = s[:len(s)-1]
+	}
+	return s, nil
+}
+
 func (cpu *CPU) loadTemp() {
 	if cpu.Temp == -100 {
 		return
@@ -111,7 +139,7 @@ func (c *coreLoad) percent() float64 {
 	if c.v[0][1] == 0 {
 		return 0.0
 	}
-	return (c.v[1][1] - c.v[0][1]) / (c.v[1][0] - c.v[0][0])
+	return (c.v[1][0] - c.v[0][0]) / (c.v[1][1] - c.v[0][1])
 }
 
 func (c *CPU) loadUse() {
@@ -151,16 +179,20 @@ func (c *CPU) loadUse() {
 				i++
 			}
 			elget()
+			n = 0.0
 			for j = 0; j < 4 && i < len(b); i++ {
-				n = 0.0
 				if b[i] >= 48 && b[i] <= 57 {
 					n = n*10 + float64(b[i]) - 48
 				} else if b[i] == ' ' {
 					el.readStat(&t, &j, &n)
+					n = 0.0
 					j++
 				} else {
 					return fmt.Errorf("unexpected byte %c at index %d", b[i], i)
 				}
+			}
+			if j < 3 {
+				return fmt.Errorf("unexpected end of line at index %d", i)
 			}
 			elsv()
 			for i < len(b) {
@@ -182,7 +214,6 @@ func (c *CPU) loadUse() {
 		goto onErr
 	}
 	c.LoadAvg.FromFloat(cl[0].percent())
-	c.LoadAvg.Clamp()
 	cl = cl[1:]
 	if len(cl) == 0 {
 		goto onEmpty
@@ -190,7 +221,6 @@ func (c *CPU) loadUse() {
 	c.LoadCore = make([]types.Percent, len(cl))
 	for i, j := range cl {
 		c.LoadCore[i].FromFloat(j.percent())
-		c.LoadCore[i].Clamp()
 	}
 	return
 onErr:
