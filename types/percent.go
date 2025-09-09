@@ -49,5 +49,12 @@ func (P *Percent) SetValueInt(v int) {
 }
 
 func (P *Percent) Bar(title string, w int) (s string, err error) {
-	return Bar(title, w, int(P.Value()), 100, P.Compact())
+	v := int(P.Value() + 0.5)
+	if v < 0 {
+		v = 0
+	}
+	if v > 100 {
+		v = 100
+	}
+	return Bar(title, w, v, 100, P.Compact())
 }

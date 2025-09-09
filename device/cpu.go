@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"git.sophuwu.com/statlog/types"
 	"os"
 	"strings"
 	"time"
+
+	"git.sophuwu.com/statlog/types"
 )
 
 type CPU struct {
@@ -18,9 +19,11 @@ type CPU struct {
 	Temp     types.Celsius   `json:"Temp"`
 }
 
-func (c *CPU) LoadBar() (s string, err error) {
-	w, _ := types.TermSize()
-	l := len(c.LoadCore)
+func (cpu *CPU) LoadBar(w int) (s string, err error) {
+	if w == 0 {
+		w, _ = types.TermSize()
+	}
+	l := len(cpu.LoadCore)
 	ss := ""
 	div := 3
 	if w < 100 {
@@ -30,7 +33,7 @@ func (c *CPU) LoadBar() (s string, err error) {
 	}
 	w = (w - 2) / div
 	for i := 0; i < l; i++ {
-		if ss, err = c.LoadCore[i].Bar(fmt.Sprintf("%2d", i), w); err != nil {
+		if ss, err = cpu.LoadCore[i].Bar(fmt.Sprintf("%2d", i), w); err != nil {
 			return "", err
 		}
 		s += ss
@@ -97,29 +100,29 @@ func (cpu *CPU) loadTemp() {
 	}
 	cpu.Temp = (types.Celsius(b[0])-48)*10 + types.Celsius(b[1]) - 48
 }
-func (c *CPU) loadMHz() {
-	c.MHzAvg = 0
+func (cpu *CPU) loadMHz() {
+	cpu.MHzAvg = 0
 	b, err := os.ReadFile("/proc/cpuinfo")
 	if err != nil {
 		return
 	}
 	var ns types.NumSeeker
-	c.MHzCore = make([]types.MHz, 0)
+	cpu.MHzCore = make([]types.MHz, 0)
 	tot, n := 0.0, 0.0
 	for _, v := range bytes.Split(b, []byte("\n")) {
 		if bytes.HasPrefix(v, []byte("cpu MHz")) {
 			ns.Init(v)
 			n = ns.GetFloat()
 			tot += n
-			c.MHzCore = append(c.MHzCore, types.MHz(n))
+			cpu.MHzCore = append(cpu.MHzCore, types.MHz(n))
 		}
 	}
-	if len(c.MHzCore) == 0 {
-		c.MHzAvg = 0
-		c.MHzCore = nil
+	if len(cpu.MHzCore) == 0 {
+		cpu.MHzAvg = 0
+		cpu.MHzCore = nil
 		return
 	}
-	c.MHzAvg = types.MHz(tot / float64(len(c.MHzCore)))
+	cpu.MHzAvg = types.MHz(tot / float64(len(cpu.MHzCore)))
 }
 
 type coreLoad struct {
@@ -142,7 +145,7 @@ func (c *coreLoad) percent() float64 {
 	return (c.v[1][0] - c.v[0][0]) / (c.v[1][1] - c.v[0][1])
 }
 
-func (c *CPU) loadUse() {
+func (cpu *CPU) loadUse() {
 	var cl []coreLoad
 	loadVals := func(t int) error {
 		i, j, k, n := 0, 0, 0, 0.0
@@ -213,26 +216,26 @@ func (c *CPU) loadUse() {
 	if err != nil || len(cl) == 0 {
 		goto onErr
 	}
-	c.LoadAvg.FromFloat(cl[0].percent())
+	cpu.LoadAvg.FromFloat(cl[0].percent())
 	cl = cl[1:]
 	if len(cl) == 0 {
 		goto onEmpty
 	}
-	c.LoadCore = make([]types.Percent, len(cl))
+	cpu.LoadCore = make([]types.Percent, len(cl))
 	for i, j := range cl {
-		c.LoadCore[i].FromFloat(j.percent())
+		cpu.LoadCore[i].FromFloat(j.percent())
 	}
 	return
 onErr:
-	c.LoadAvg = -1.0
+	cpu.LoadAvg = -1.0
 onEmpty:
-	c.LoadCore = nil
+	cpu.LoadCore = nil
 }
 
-func (c *CPU) Update() {
-	c.loadMHz()
-	c.loadTemp()
-	c.loadUse()
+func (cpu *CPU) Update() {
+	cpu.loadMHz()
+	cpu.loadTemp()
+	cpu.loadUse()
 }
 
 func numSize(n int) int {
@@ -250,22 +253,22 @@ func numSize(n int) int {
 	}
 	return i
 }
-func (c *CPU) LoadCoreStr() (s string) {
-	if c.LoadCore == nil || len(c.LoadCore) == 0 {
+func (cpu *CPU) LoadCoreStr() (s string) {
+	if cpu.LoadCore == nil || len(cpu.LoadCore) == 0 {
 		return s
 	}
 	var i int
-	fmtstr := "cpu %." + fmt.Sprintf("%d", numSize(len(c.LoadCore))) + "d: %s"
+	fmtstr := "cpu %." + fmt.Sprintf("%d", numSize(len(cpu.LoadCore))) + "d: %s"
 	fn := func() {
-		s += fmt.Sprintf(fmtstr, i, c.LoadCore[i])
+		s += fmt.Sprintf(fmtstr, i, cpu.LoadCore[i])
 	}
-	if c.MHzCore != nil && len(c.LoadCore) == len(c.MHzCore) {
+	if cpu.MHzCore != nil && len(cpu.LoadCore) == len(cpu.MHzCore) {
 		fmtstr += "  %s"
 		fn = func() {
-			s += fmt.Sprintf(fmtstr, i, c.LoadCore[i], c.MHzCore[i])
+			s += fmt.Sprintf(fmtstr, i, cpu.LoadCore[i], cpu.MHzCore[i])
 		}
 	}
-	for i = 0; i < len(c.LoadCore); i++ {
+	for i = 0; i < len(cpu.LoadCore); i++ {
 		fn()
 		if i%3 == 2 {
 			s += "\n"
@@ -281,10 +284,10 @@ func (c *CPU) LoadCoreStr() (s string) {
 	return
 }
 
-func (c CPU) String() string {
-	return fmt.Sprintf("%s  %s  %s", c.LoadAvg, c.MHzAvg, c.Temp)
+func (cpu CPU) String() string {
+	return fmt.Sprintf("%s  %s  %s", cpu.LoadAvg, cpu.MHzAvg, cpu.Temp)
 }
-func (c *CPU) JSON() (string, error) {
-	b, e := json.Marshal(c)
+func (cpu *CPU) JSON() (string, error) {
+	b, e := json.Marshal(cpu)
 	return string(b), e
 }

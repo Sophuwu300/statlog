@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	"golang.org/x/term"
 )
 
@@ -33,6 +34,8 @@ func TermSize() (w int, h int) {
 	return
 }
 
+var ErrTooNarrow = fmt.Errorf("terminal too narrow")
+
 func Bar(title string, w, val, max int, vlbl string) (string, error) {
 	if max <= 0 || val < 0 || val > max {
 		return "", fmt.Errorf("invalid values: val=%d, max=%d", val, max)
@@ -44,7 +47,7 @@ func Bar(title string, w, val, max int, vlbl string) (string, error) {
 	w = w - len(s) - 2 - len(vlbl)
 
 	if w < 10 {
-		return "", fmt.Errorf("terminal too narrow")
+		return "", ErrTooNarrow
 	}
 
 	val = int(float64(val) * float64(w) / float64(max))
@@ -99,12 +102,7 @@ func Graph(title string, max int) (func(w, h, val int) (string, error), error) {
 		}
 		var v int
 		for i = 0; i < h; i++ {
-			s += "\033[1A" + func() string {
-				if i%2 == 0 {
-					return "\033[1;37m"
-				}
-				return "\033[1;97m"
-			}()
+			s += "\033[1A"
 			for j, v = range vv {
 				v -= i * len(gch)
 				if v < len(gch) {
