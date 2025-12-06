@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"git.sophuwu.com/statlog"
 	"git.sophuwu.com/statlog/types"
@@ -43,6 +44,16 @@ func main() {
 	prnt := func() {
 		fmt.Printf("\033[2J\033[1;1H\r%s\n", s)
 	}
+	ERR := func() bool {
+		if errors.Is(e, types.ErrTooNarrow) {
+			s = "terminal too narrow"
+			prnt()
+			time.Sleep(100 * time.Millisecond)
+			return true
+		}
+		fatal(e)
+		return false
+	}
 	for bl {
 		w, _ = types.TermSize()
 		s = ""
@@ -51,15 +62,15 @@ func main() {
 
 		// mem
 		ss, e = hw.MEM.Bar()
-		if errors.Is(e, types.ErrTooNarrow) {
-			s = "Terminal too narrow"
-			prnt()
+
+		if ERR() {
 			continue
 		}
-		fatal(e)
 		s += "MEM: " + hw.MEM.String() + "\n" + ss + "\n"
 		ss, e = grMem(w, 5, int(hw.MEM.Percent.Used+hw.MEM.Percent.Buff))
-		fatal(e)
+		if ERR() {
+			continue
+		}
 		s += ss + "\n"
 
 		// cpu
@@ -68,29 +79,25 @@ func main() {
 		s += "CPU: " + hw.CPU.String() + "\n"
 		// make load graph
 		ss, e = grCpu(w, 5, int(hw.CPU.LoadAvg))
-		fatal(e)
+		if ERR() {
+			continue
+		}
 		// print load graph
 		s += ss + "\n"
 
 		// cpu bar graphs
 		// make bar graph
 		ss, e = hw.CPU.LoadAvg.Bar("CPU Avg", w)
-		if errors.Is(e, types.ErrTooNarrow) {
-			s = "Terminal too narrow"
-			prnt()
+		if ERR() {
 			continue
 		}
-		fatal(e)
 		// print bar graph
 		s += ss + "\n"
 		// make core bar graphs
 		ss, e = hw.CPU.LoadBar(w)
-		if errors.Is(e, types.ErrTooNarrow) {
-			s = "Terminal too narrow"
-			prnt()
+		if ERR() {
 			continue
 		}
-		fatal(e)
 		// print core bar graphs
 		s += ss + "\n"
 

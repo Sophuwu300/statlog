@@ -3,9 +3,10 @@ package device
 import (
 	"encoding/json"
 	"fmt"
-	"git.sophuwu.com/statlog/types"
 	"os"
 	"strings"
+
+	"git.sophuwu.com/statlog/types"
 )
 
 type MEM struct {
@@ -47,7 +48,7 @@ func (m *MEM) String() string {
 func (m *MEM) Bar() (string, error) {
 	w, _ := types.TermSize()
 	if w < 40 {
-		return "", fmt.Errorf("terminal too narrow")
+		return "", types.ErrTooNarrow
 	}
 
 	s := "MEM: "
@@ -61,7 +62,7 @@ func (m *MEM) Bar() (string, error) {
 	l := len(strings.NewReplacer("\033[1;32m", "", "\033[1;36m", "", "\033[1;35m", "", "\033[0m", "").Replace(s))
 	w -= l
 	if w < 40 {
-		return "", fmt.Errorf("terminal too narrow")
+		return "", types.ErrTooNarrow
 	}
 	w -= 2
 
