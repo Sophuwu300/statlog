@@ -67,7 +67,7 @@ func main() {
 			continue
 		}
 		s += "MEM: " + hw.MEM.String() + "\n" + ss + "\n"
-		ss, e = grMem(w, 5, int(hw.MEM.Percent.Used+hw.MEM.Percent.Buff))
+		ss, e = grMem(w, 5, int(hw.MEM.Percent.Used))
 		if ERR() {
 			continue
 		}
