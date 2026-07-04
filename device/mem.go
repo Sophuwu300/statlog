@@ -47,6 +47,7 @@ func (m *MEM) String() string {
 
 func (m *MEM) Bar() (string, error) {
 	w, _ := types.TermSize()
+	w-=2
 	if w < 40 {
 		return "", types.ErrTooNarrow
 	}
